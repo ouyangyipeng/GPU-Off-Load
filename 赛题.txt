@@ -1,0 +1,86 @@
+赛题项目
+命名日期	大赛名称
+2025-12-31	2026年全国大学生计算机系统能力大赛-操作系统设计赛(全国)-OS功能挑战赛道
+赛题中文名称	赛题英文名称
+基于 GPU 的服务资源卸载技术探索	Exploration of GPU-based Service Resource Off-loading Technology
+赛题难度等级	赛题类型
+A	工程型
+信息维护
+赛题维护单位名称：四川省华存智谷科技有限责任公司、赛题维护人姓名：符青云、邮箱：qingyun_fu@qq.com / fuqingyun@tgstor.cn
+赛题背景
+高性能服务器处理很多业务的CPU消耗很高，例如全闪存的存储服务器，随着NVME盘的性能迅速提升，仅仅处理IO本身就已经对CPU消耗巨大，这使得如果在服务上面还要跑别的业务，例如存储之上跑数据库，数据库之上跑应用或者中间件的CPU资源就很紧张了，而且因为CPU相互竞争影响性能。希望通过GPU offload 部分计算密集型的任务，减小主CPU的资源消耗。
+
+赛题任务
+通过 dm 在 block 层作压缩
+优点，上层支持各种文件系统
+
+通过 btrfs、zfs 在文件系统层作压缩
+优点，内容感知，有可能支持更好的压缩效率，但是被锁定在特定文件系统了，而这些文件系统本身的绝对性能可能不如 xfs、ext4 这些
+
+性能指标可以根据网上相关测试为基准，然后实测，接着看 GPU offload 的性能改进
+
+纯 CPU 实现的性能和 CPU、DRAM 开销
+GPU offload 实现的 CPU、DRAM 开销
+CPU 比较不同架构，x86、aarch64 等的性能
+
+fio，vdbench 测试性能
+top，htop，perf，stat，sar 等工具分析资源消耗
+
+赛题特征
+GPU offload 对国产化 CPU 处理计算密集型任务稍弱的补充
+
+平台：
+GPU RTX3060/4060/5060
+编程框架 CUDA SDK:
+https://developer.nvidia.com/cuda-downloads
+
+CPU 华为鲲鹏 920
+
+参考资料
+Linux 内核
+fs/btrfs 目录
+Documentation/admin-guide/device-mapper 目录
+drivers/md
+ZFS 通过 Intel QAT 硬件加速
+https://openzfs.org/wiki/ZFS_Hardware_Acceleration_with_QAT
+
+ZFS Interface for Accelerators (Z.I.A.)
+https://github.com/openzfs/zfs/pull/13628
+
+加速模块接入存储 I/O 路径的机制相关资料
+CUDA 的 nvCOMP 库加速存储系统 压缩/解压 的代码
+https://github.com/NVIDIA/CUDALibrarySamples/tree/master/nvCOMP
+https://github.com/NVIDIA/CUDALibrarySamples/tree/master/nvCOMP/examples
+
+Linux 存储通过 GPU 加速相关材料
+https://www.uab.edu/cas/cybersecurity/images/Documents/Matthew_Curry_Dissertation1.pdf（注：该网页存在系统内部异常，可能无法正常访问）
+
+A Highly Reliable GPU-Bases RAID System
+https://forums.developer.nvidia.com/t/offload-raid-xor-to-gpu-can-cuda-technologies-be-used-for-raid-effectively/17204/6
+GRAID文档
+https://www.youtube.com/watch?v=fGo0e5qiFXs（注：该网页为境外网页，当前无法访问）
+GRAID: High-Performance GPU-Accelerated RAID on GNU/Linux
+
+公司官网
+https://graidtech.com/products/supremeraid-he
+
+应用层通过 eBPF 编写 Linux 内核代码
+https://github.com/xrp-project/XRP
+XRP: In-Kernel Storage Functions with eBPF
+https://github.com/el18053/Diploma
+Optimizing Linux Kernel Storage Stack with eBPF
+
+评审要点
+1. 创新性
+英伟达最新一代 GPU 自带了压缩引擎（https://developer.nvidia.com/nvcomp）。但更加突出 GPU 通用算力处理压缩解压任务，提供了更广泛的适配性，不锁定最新 GPU，不锁定 GPU 供应商，需要更深入了解 GPU 的特点和性能优化方式。
+
+2. 完整度
+跑起来，有完整性能测试报告，测试用例的覆盖率相对完整，文档描述清楚，根据文档可以完成部署和二次开发与集成。
+
+3. DEMO 质量
+核心看稳定性和性能。
+
+4. 评价方式
+功能实现：30%
+设计完整性与测试用例设计：20%
+性能测试：20%

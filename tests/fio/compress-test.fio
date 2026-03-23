@@ -1,0 +1,56 @@
+# fio 测试配置文件
+# 用于测试GPU压缩块设备的性能
+
+[global]
+# 全局设置
+ioengine=libaio
+direct=1
+sync=0
+time_based
+runtime=60
+randrepeat=0
+
+# 测试块大小
+bs=4k
+
+# 队列深度
+iodepth=32
+numjobs=4
+
+# 测试目录/设备
+# 使用时指定: fio --directory=/mnt/test 或 --filename=/dev/dm-0
+
+# 结果输出
+group_reporting
+percentile_list=50:90:95:99
+
+# 顺序读测试
+[seq-read]
+name=Sequential Read
+rw=read
+stonewall
+
+# 顺序写测试
+[seq-write]
+name=Sequential Write
+rw=write
+stonewall
+
+# 随机读测试
+[rand-read]
+name=Random Read
+rw=randread
+stonewall
+
+# 随机写测试
+[rand-write]
+name=Random Write
+rw=randwrite
+stonewall
+
+# 混合读写测试
+[rand-rw]
+name=Random Read/Write
+rw=randrw
+rwmixread=70
+stonewall

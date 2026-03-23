@@ -1,0 +1,73 @@
+# 编译输出
+*.o
+*.ko
+*.ko.cmd
+*.mod.c
+*.mod
+*.symvers
+*.order
+.tmp_versions/
+Module.symvers
+modules.order
+
+# 共享库
+*.so
+*.so.*
+*.a
+
+# 可执行文件
+dm-compress-tool
+test_gpu_compress
+
+# 构建目录
+build/
+out/
+
+# IDE和编辑器
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.cproject
+.settings/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.env/
+venv/
+
+# 测试结果
+tests/results/
+*.log
+*.json
+
+# 打包文件
+*.tar.gz
+*.zip
+*.deb
+*.rpm
+
+# 依赖
+node_modules/
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# 临时文件
+*.tmp
+*.temp
+*.bak
+
+# 调试文件
+*.core
+core.*
+vgcore.*
+
+# 配置文件（可能包含敏感信息）
+.env
+*.local
