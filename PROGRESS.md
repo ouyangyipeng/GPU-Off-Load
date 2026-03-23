@@ -16,15 +16,13 @@
    - 优点：内容感知，可能支持更好的压缩效率
 
 ## 开发环境
-- **架构**: x86_64
-- **操作系统**: Ubuntu 22.04
-- **GPU**: NVIDIA GPU (支持CUDA)
-- **编程框架**: CUDA SDK 12.x
-
-## 目标平台（比赛）
 - **架构**: aarch64 (华为鲲鹏920)
-- **GPU**: RTX3060/4060/5060
-- **操作系统**: openEuler 或 Ubuntu
+- **操作系统**: Ubuntu 22.04
+- **内核**: 5.15.0-91-generic
+- **CPU**: 192核鲲鹏920
+- **内存**: 1.5TB
+- **存储**: 3x 7TB NVMe SSD
+- **GPU**: 无NVIDIA GPU（当前测试CPU压缩模式）
 
 ## 当前状态
 - [x] 阅读赛题文档
@@ -32,7 +30,11 @@
 - [x] 环境搭建脚本
 - [x] 代码开发
 - [x] 文档编写
-- [ ] 测试验证（需要在目标环境执行）
+- [x] 内核模块编译测试
+- [x] 功能测试验证
+- [x] 性能基准测试
+- [ ] 实现CPU压缩功能
+- [ ] GPU压缩测试（需要NVIDIA GPU环境）
 
 ## 重要参考资料
 - Linux内核: fs/btrfs, Documentation/admin-guide/device-mapper, drivers/md
@@ -41,9 +43,25 @@
 - GRAID: https://graidtech.com/products/supremeraid-he
 
 ---
-*每次工作前请先阅读此文档了解项目状态*
 
 ## 进度日志
+
+### 2026-03-24
+- 在鲲鹏920服务器上进行测试
+- 修复内核模块编译错误:
+  - crypto_comp_compress参数类型不匹配
+  - REQ_OP_DISARD拼写错误
+  - total_chunks计算错误
+- 成功加载dm-compress内核模块
+- 完成功能测试:
+  - 模块加载/卸载正常
+  - 压缩设备创建/删除正常
+  - ext4文件系统兼容性测试通过
+- 完成性能测试:
+  - 基准测试（无压缩）: 446 MiB/s, 7142 IOPS
+  - dm-compress透传模式: 616 MiB/s, 9859 IOPS
+  - 随机读写测试: 读51.5k IOPS, 写22.1k IOPS
+- 更新测试报告文档
 
 ### 2026-03-23
 - 创建项目进度记录文档
@@ -61,10 +79,10 @@
 - 创建环境搭建文档 (docs/environment.md)
 
 ## 下一步计划
-1. 在目标环境（鲲鹏920 + NVIDIA GPU）上编译测试
-2. 运行性能基准测试
-3. 收集性能数据并填写测试报告
-4. 根据测试结果进行优化
+1. 实现CPU压缩功能（当前模块仅透传I/O）
+2. 在有NVIDIA GPU的机器上测试GPU压缩
+3. 对比CPU vs GPU压缩的性能差异
+4. 优化压缩算法和参数
 5. 准备最终提交材料
 
 ## 项目文件清单
@@ -89,10 +107,24 @@
 - `docs/environment.md` - 环境搭建指南
 - `docs/api.md` - API文档
 - `docs/deployment.md` - 部署指南
-- `docs/test-report.md` - 测试报告模板
+- `docs/test-report.md` - 测试报告
 
 ### 构建
 - `Makefile` - 顶层构建文件
 - `src/user/gpu-compress/Makefile` - GPU库构建
 - `src/kernel/dm-compress/Makefile` - 内核模块构建
 - `src/user/tools/Makefile` - 工具构建
+
+## 测试结果摘要
+
+| 测试项 | 结果 |
+|--------|------|
+| 模块加载 | ✅ 通过 |
+| 设备创建 | ✅ 通过 |
+| 文件系统(ext4) | ✅ 通过 |
+| 顺序写性能 | 616 MiB/s, 9859 IOPS |
+| 随机读性能 | 201 MiB/s, 51.5k IOPS |
+| 随机写性能 | 86.3 MiB/s, 22.1k IOPS |
+
+---
+*每次工作前请先阅读此文档了解项目状态*

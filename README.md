@@ -8,6 +8,7 @@
 
 - **Block层透明压缩**: 通过 Device Mapper 在块设备层实现透明压缩，支持上层各种文件系统（xfs、ext4等）
 - **GPU加速**: 利用 NVIDIA GPU 和 nvCOMP 库加速压缩/解压操作
+- **CPU压缩支持**: 支持使用内核crypto API进行CPU压缩（备用方案）
 - **多算法支持**: 支持 LZ4、ZSTD、DEFLATE 等多种压缩算法
 - **低CPU开销**: 将计算密集型任务卸载到GPU，显著降低CPU利用率
 
@@ -47,25 +48,21 @@
 GPU-Off-Load/
 ├── README.md               # 项目说明
 ├── PROGRESS.md             # 进度记录
-├── plans/                  # 计划文档
-│   └── project-plan.md
+├── 赛题.txt                # 赛题文档
 ├── docs/                   # 项目文档
 │   ├── design.md          # 设计文档
 │   ├── environment.md      # 环境搭建
 │   ├── api.md             # API文档
 │   ├── test-report.md     # 测试报告
-│   ├── performance.md     # 性能报告
 │   └── deployment.md      # 部署指南
 ├── src/                    # 源代码
 │   ├── kernel/            # 内核模块
 │   │   └── dm-compress/   # dm压缩模块
-│   ├── user/              # 用户空间工具
-│   │   ├── gpu-compress/  # GPU压缩引擎
-│   │   └── tools/         # 辅助工具
-│   └── lib/               # 共享库
+│   └── user/              # 用户空间工具
+│       ├── gpu-compress/  # GPU压缩引擎
+│       └── tools/         # 辅助工具
 ├── tests/                  # 测试脚本
 │   ├── fio/               # fio测试配置
-│   ├── vdbench/           # vdbench测试配置
 │   └── scripts/           # 测试脚本
 ├── scripts/                # 构建和部署脚本
 └── Makefile               # 顶层构建文件
@@ -76,72 +73,95 @@ GPU-Off-Load/
 ### 环境要求
 
 - 操作系统: Ubuntu 22.04 / openEuler
-- GPU: NVIDIA GPU (支持CUDA)
-- CUDA Toolkit: 12.x
+- GPU: NVIDIA GPU (支持CUDA) - 可选
+- CUDA Toolkit: 12.x - 可选（GPU加速需要）
 - Linux内核: 5.15+
+- 架构: x86_64 / aarch64 (鲲鹏920已验证)
 
 ### 安装步骤
 
 ```bash
 # 1. 克隆仓库
-git clone <repository-url>
+git clone https://github.com/ouyangyipeng/GPU-Off-Load.git
 cd GPU-Off-Load
 
-# 2. 运行环境搭建脚本
-./scripts/setup-env.sh
+# 2. 安装依赖
+sudo apt install -y build-essential linux-headers-$(uname -r) fio
 
-# 3. 编译项目
-make all
+# 3. 编译内核模块
+cd src/kernel/dm-compress
+make
 
-# 4. 安装内核模块
-sudo make install
+# 4. 加载内核模块
+sudo insmod dm_compress.ko
 
-# 5. 验证安装
-./tests/scripts/verify-install.sh
+# 5. 验证模块加载
+dmsetup targets | grep compress
 ```
 
-## 使用方法
-
-### 创建压缩块设备
+### 创建压缩设备
 
 ```bash
-# 创建压缩块设备
-sudo dmsetup create compressed_dev --table "0 `blockdev --getsize /dev/nvme0n1` compress /dev/nvme0n1"
+# 创建压缩设备
+sudo dmsetup create compress_dev --table \
+    "0 `blockdev --getsize /dev/nvme0n1` compress /dev/nvme0n1 65536 lz4"
 
-# 查看设备状态
-sudo dmsetup status compressed_dev
+# 创建文件系统
+sudo mkfs.ext4 /dev/mapper/compress_dev
+
+# 挂载
+sudo mount /dev/mapper/compress_dev /mnt/compress
 ```
 
-### 性能测试
+## 测试结果
 
-```bash
-# 运行fio测试
-./tests/scripts/run-fio-test.sh
+### 测试环境
 
-# 查看性能报告
-cat docs/performance.md
-```
+| 项目 | 配置 |
+|------|------|
+| CPU | 华为鲲鹏920 (192核) |
+| 内存 | 1.5TB |
+| 存储 | 3x 7TB NVMe SSD |
+| 内核 | 5.15.0-91-generic |
+| GPU | 无（测试CPU压缩模式） |
 
-## 开发文档
+### 性能数据
 
-详细文档请参阅 [docs/](docs/) 目录：
+| 测试场景 | 带宽 | IOPS | 延迟 |
+|----------|------|------|------|
+| 顺序写（透传模式）| 616 MiB/s | 9,859 | 3.2ms |
+| 随机读（4K）| 201 MiB/s | 51,500 | 433µs |
+| 随机写（4K）| 86.3 MiB/s | 22,100 | 436µs |
 
-- [系统设计文档](docs/design.md)
-- [环境搭建指南](docs/environment.md)
-- [API文档](docs/api.md)
-- [性能测试报告](docs/performance.md)
+详细测试报告请查看 [docs/test-report.md](docs/test-report.md)
+
+## 文档
+
+- [项目介绍](docs/introduction.md) - 赛题背景和项目概述
+- [设计文档](docs/design.md) - 系统架构设计
+- [环境搭建](docs/environment.md) - 开发环境配置
+- [部署指南](docs/deployment.md) - 部署和使用说明
+- [测试报告](docs/test-report.md) - 性能测试结果
+
+## 开发状态
+
+- [x] 内核模块框架
+- [x] Device Mapper compress目标
+- [x] CPU压缩支持（crypto API）
+- [x] 功能测试通过
+- [x] 性能基准测试
+- [ ] GPU压缩实现
+- [ ] GPU vs CPU性能对比
 
 ## 许可证
 
-本项目采用 MIT 许可证。
+本项目采用 GPL 许可证（内核模块）和 MIT 许可证（用户空间工具）。
 
-## 团队
+## 贡献
 
-2026年全国大学生计算机系统能力大赛参赛团队。
+欢迎提交 Issue 和 Pull Request！
 
-## 参考资料
+## 联系方式
 
-- [Linux Device Mapper](https://www.kernel.org/doc/Documentation/admin-guide/device-mapper/)
-- [NVIDIA nvCOMP Library](https://github.com/NVIDIA/CUDALibrarySamples/tree/master/nvCOMP)
-- [ZFS Hardware Acceleration](https://openzfs.org/wiki/ZFS_Hardware_Acceleration_with_QAT)
-- [GRAID Technology](https://graidtech.com/products/supremeraid-he)
+- 项目地址: https://github.com/ouyangyipeng/GPU-Off-Load
+- 赛题维护: 四川省华存智谷科技有限责任公司

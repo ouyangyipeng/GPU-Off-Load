@@ -185,6 +185,7 @@ static int cpu_compress(const void *src, size_t src_len,
 {
     /* 使用内核crypto API进行压缩 */
     struct crypto_comp *tfm;
+    unsigned int dlen;
     int ret;
     
     switch (algo) {
@@ -207,7 +208,9 @@ static int cpu_compress(const void *src, size_t src_len,
         return PTR_ERR(tfm);
     }
     
-    ret = crypto_comp_compress(tfm, src, src_len, dst, dst_len);
+    dlen = *dst_len;
+    ret = crypto_comp_compress(tfm, src, src_len, dst, &dlen);
+    *dst_len = dlen;
     crypto_free_comp(tfm);
     
     return ret;
@@ -221,6 +224,7 @@ static int cpu_decompress(const void *src, size_t src_len,
                           enum compress_algo algo)
 {
     struct crypto_comp *tfm;
+    unsigned int dlen;
     int ret;
     
     switch (algo) {
@@ -243,7 +247,9 @@ static int cpu_decompress(const void *src, size_t src_len,
         return PTR_ERR(tfm);
     }
     
-    ret = crypto_comp_decompress(tfm, src, src_len, dst, dst_len);
+    dlen = *dst_len;
+    ret = crypto_comp_decompress(tfm, src, src_len, dst, &dlen);
+    *dst_len = dlen;
     crypto_free_comp(tfm);
     
     return ret;
@@ -366,8 +372,8 @@ static int compress_ctr(struct dm_target *ti, unsigned int argc, char **argv)
         }
     }
     
-    /* 计算总块数 */
-    cc->total_chunks = ti->len >> cc->chunk_shift;
+    /* 计算总块数 - ti->len是扇区数，需要转换为chunk数 */
+    cc->total_chunks = ti->len >> (cc->chunk_shift - SECTOR_SHIFT);
     if (cc->total_chunks == 0) {
         ti->error = "设备太小";
         ret = -EINVAL;
@@ -512,7 +518,7 @@ static int compress_map(struct dm_target *ti, struct bio *bio)
         bio_set_dev(bio, cc->dev->bdev);
         return DM_MAPIO_REMAPPED;
         
-    case REQ_OP_DISARD:
+    case REQ_OP_DISCARD:
         bio_set_dev(bio, cc->dev->bdev);
         return DM_MAPIO_REMAPPED;
         
